@@ -1,0 +1,44 @@
+{
+  "name": "ai-car-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@arcjet/next": "^1.0.0-beta.9",
+    "@clerk/nextjs": "^6.28.1",
+    "@google/generative-ai": "^0.24.1",
+    "@hookform/resolvers": "^5.2.1",
+    "@prisma/client": "^6.13.0",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.53.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.536.0",
+    "next": "15.4.5",
+    "react": "19.1.0",
+    "react-day-picker": "^9.8.1",
+    "react-dom": "19.1.0",
+    "react-dropzone": "^14.3.8",
+    "tailwind-merge": "^3.3.1",
+    "uuid": "^11.1.0",
+    "zod": "^4.0.14"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.5",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.3.6",
+    "typescript": "^5"
+  }
+}
