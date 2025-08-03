@@ -20,3 +20,5 @@ dist
 coverage
 BadEntity.json
 .eslintrc.js
+prisma
+schema.prisma
