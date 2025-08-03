@@ -14,6 +14,8 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().nonempty(),
     NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: z.string().nonempty(),
     NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: z.string().nonempty(),
+    NEXT_PUBLIC_SUPABASE_URL: z.string().nonempty(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().nonempty(),
   },
 
   experimental__runtimeEnv: {
@@ -22,5 +24,7 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,
     NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL,
     NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
 });
