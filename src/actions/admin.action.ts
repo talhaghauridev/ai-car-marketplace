@@ -1,0 +1,187 @@
+"use server";
+
+import { serializeCarData } from "@/lib/helpers";
+import prisma from "@/lib/prisma";
+import { adminActionClient } from "@/utils/safe-action";
+import { revalidatePath } from "next/cache";
+
+// Get admin data
+export const getAdmin = adminActionClient.action(async ({ ctx }) => {
+  // The admin check is already handled by adminActionClient
+  return { authorized: true };
+});
+
+// Get all test drives for admin with filters
+export const getAdminTestDrives = adminActionClient.action(async ({ search = "", status = "" }) => {
+  // Build where conditions
+  let where = {};
+
+  // Add status filter
+  if (status) {
+    where.status = status;
+  }
+
+  // Add search filter
+  if (search) {
+    where.OR = [
+      {
+        car: {
+          OR: [
+            { make: { contains: search, mode: "insensitive" } },
+            { model: { contains: search, mode: "insensitive" } },
+          ],
+        },
+      },
+      {
+        user: {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+          ],
+        },
+      },
+    ];
+  }
+
+  // Get bookings
+  const bookings = await prisma.testDriveBooking.findMany({
+    where,
+    include: {
+      car: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          imageUrl: true,
+          phone: true,
+        },
+      },
+    },
+    orderBy: [{ bookingDate: "desc" }, { startTime: "asc" }],
+  });
+
+  // Format the bookings
+  const formattedBookings = bookings.map((booking) => ({
+    id: booking.id,
+    carId: booking.carId,
+    car: serializeCarData(booking.car),
+    userId: booking.userId,
+    user: booking.user,
+    bookingDate: booking.bookingDate.toISOString(),
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    status: booking.status,
+    notes: booking.notes,
+    createdAt: booking.createdAt.toISOString(),
+    updatedAt: booking.updatedAt.toISOString(),
+  }));
+
+  return {
+    success: true,
+    data: formattedBookings,
+  };
+});
+
+// Update test drive status
+export const updateTestDriveStatus = adminActionClient.action(async ({ bookingId, newStatus }) => {
+  // Get the booking
+  const booking = await prisma.testDriveBooking.findUnique({
+    where: { id: bookingId },
+  });
+
+  if (!booking) {
+    throw new Error("Booking not found");
+  }
+
+  // Validate status
+  const validStatuses = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error("Invalid status");
+  }
+
+  // Update status
+  await prisma.testDriveBooking.update({
+    where: { id: bookingId },
+    data: { status: newStatus },
+  });
+
+  // Revalidate paths
+  revalidatePath("/admin/test-drives");
+  revalidatePath("/reservations");
+
+  return {
+    success: true,
+    message: "Test drive status updated successfully",
+  };
+});
+
+// Get dashboard data
+export const getDashboardData = adminActionClient.action(async () => {
+  // Fetch all necessary data in a single parallel operation
+  const [cars, testDrives] = await Promise.all([
+    prisma.car.findMany({
+      select: {
+        id: true,
+        status: true,
+        featured: true,
+      },
+    }),
+    prisma.testDriveBooking.findMany({
+      select: {
+        id: true,
+        status: true,
+        carId: true,
+      },
+    }),
+  ]);
+
+  // Calculate car statistics
+  const totalCars = cars.length;
+  const availableCars = cars.filter((car) => car.status === "AVAILABLE").length;
+  const soldCars = cars.filter((car) => car.status === "SOLD").length;
+  const unavailableCars = cars.filter((car) => car.status === "UNAVAILABLE").length;
+  const featuredCars = cars.filter((car) => car.featured === true).length;
+
+  // Calculate test drive statistics
+  const totalTestDrives = testDrives.length;
+  const pendingTestDrives = testDrives.filter((td) => td.status === "PENDING").length;
+  const confirmedTestDrives = testDrives.filter((td) => td.status === "CONFIRMED").length;
+  const completedTestDrives = testDrives.filter((td) => td.status === "COMPLETED").length;
+  const cancelledTestDrives = testDrives.filter((td) => td.status === "CANCELLED").length;
+  const noShowTestDrives = testDrives.filter((td) => td.status === "NO_SHOW").length;
+
+  // Calculate test drive conversion rate
+  const completedTestDriveCarIds = testDrives
+    .filter((td) => td.status === "COMPLETED")
+    .map((td) => td.carId);
+
+  const soldCarsAfterTestDrive = cars.filter(
+    (car) => car.status === "SOLD" && completedTestDriveCarIds.includes(car.id)
+  ).length;
+
+  const conversionRate =
+    completedTestDrives > 0 ? (soldCarsAfterTestDrive / completedTestDrives) * 100 : 0;
+
+  return {
+    success: true,
+    data: {
+      cars: {
+        total: totalCars,
+        available: availableCars,
+        sold: soldCars,
+        unavailable: unavailableCars,
+        featured: featuredCars,
+      },
+      testDrives: {
+        total: totalTestDrives,
+        pending: pendingTestDrives,
+        confirmed: confirmedTestDrives,
+        completed: completedTestDrives,
+        cancelled: cancelledTestDrives,
+        noShow: noShowTestDrives,
+        conversionRate: parseFloat(conversionRate.toFixed(2)),
+      },
+    },
+  };
+});
