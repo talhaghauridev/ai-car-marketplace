@@ -1,122 +1,115 @@
-"use server";
-
+import "server-only";
 import { serializeCarData } from "@/lib/helpers";
 import prisma from "@/lib/prisma";
+import {
+  getAdminTestDrivesSchema,
+  updateTestDriveStatusSchema,
+} from "@/lib/validations/admin.validations";
 import { adminActionClient } from "@/utils/safe-action";
 import { revalidatePath } from "next/cache";
 
-// Get admin data
 export const getAdmin = adminActionClient.action(async ({ ctx }) => {
-  // The admin check is already handled by adminActionClient
-  return { authorized: true };
+  return { authorized: true, user: ctx.user };
 });
 
-// Get all test drives for admin with filters
-export const getAdminTestDrives = adminActionClient.action(async ({ search = "", status = "" }) => {
-  // Build where conditions
-  let where = {};
+export const getAdminTestDrives = adminActionClient
+  .inputSchema(getAdminTestDrivesSchema)
+  .action(async ({ parsedInput: { search, status } }) => {
+    let where: any = {};
 
-  // Add status filter
-  if (status) {
-    where.status = status;
-  }
+    if (status) {
+      where.status = status;
+    }
 
-  // Add search filter
-  if (search) {
-    where.OR = [
-      {
-        car: {
-          OR: [
-            { make: { contains: search, mode: "insensitive" } },
-            { model: { contains: search, mode: "insensitive" } },
-          ],
+    if (search) {
+      where.OR = [
+        {
+          car: {
+            OR: [
+              { make: { contains: search, mode: "insensitive" } },
+              { model: { contains: search, mode: "insensitive" } },
+            ],
+          },
         },
-      },
-      {
+        {
+          user: {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+            ],
+          },
+        },
+      ];
+    }
+
+    // Get bookings
+    const bookings = await prisma.testDriveBooking.findMany({
+      where,
+      include: {
+        car: true,
         user: {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { email: { contains: search, mode: "insensitive" } },
-          ],
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            imageUrl: true,
+            phone: true,
+          },
         },
       },
-    ];
-  }
+      orderBy: [{ bookingDate: "desc" }, { startTime: "asc" }],
+    });
 
-  // Get bookings
-  const bookings = await prisma.testDriveBooking.findMany({
-    where,
-    include: {
-      car: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          imageUrl: true,
-          phone: true,
-        },
-      },
-    },
-    orderBy: [{ bookingDate: "desc" }, { startTime: "asc" }],
+    // Format the bookings
+    const formattedBookings = bookings.map((booking) => ({
+      id: booking.id,
+      carId: booking.carId,
+      car: serializeCarData(booking.car),
+      userId: booking.userId,
+      user: booking.user,
+      bookingDate: booking.bookingDate.toISOString(),
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      status: booking.status,
+      notes: booking.notes,
+      createdAt: booking.createdAt.toISOString(),
+      updatedAt: booking.updatedAt.toISOString(),
+    }));
+
+    return {
+      success: true,
+      data: formattedBookings,
+    };
   });
 
-  // Format the bookings
-  const formattedBookings = bookings.map((booking) => ({
-    id: booking.id,
-    carId: booking.carId,
-    car: serializeCarData(booking.car),
-    userId: booking.userId,
-    user: booking.user,
-    bookingDate: booking.bookingDate.toISOString(),
-    startTime: booking.startTime,
-    endTime: booking.endTime,
-    status: booking.status,
-    notes: booking.notes,
-    createdAt: booking.createdAt.toISOString(),
-    updatedAt: booking.updatedAt.toISOString(),
-  }));
+export const updateTestDriveStatus = adminActionClient
+  .inputSchema(updateTestDriveStatusSchema)
+  .action(async ({ parsedInput: { bookingId, newStatus } }) => {
+    // Get the booking
+    const booking = await prisma.testDriveBooking.findUnique({
+      where: { id: bookingId },
+    });
 
-  return {
-    success: true,
-    data: formattedBookings,
-  };
-});
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
 
-// Update test drive status
-export const updateTestDriveStatus = adminActionClient.action(async ({ bookingId, newStatus }) => {
-  // Get the booking
-  const booking = await prisma.testDriveBooking.findUnique({
-    where: { id: bookingId },
+    // Update status
+    await prisma.testDriveBooking.update({
+      where: { id: bookingId },
+      data: { status: newStatus },
+    });
+
+    // Revalidate paths
+    revalidatePath("/admin/test-drives");
+    revalidatePath("/reservations");
+
+    return {
+      success: true,
+      message: "Test drive status updated successfully",
+    };
   });
 
-  if (!booking) {
-    throw new Error("Booking not found");
-  }
-
-  // Validate status
-  const validStatuses = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"];
-  if (!validStatuses.includes(newStatus)) {
-    throw new Error("Invalid status");
-  }
-
-  // Update status
-  await prisma.testDriveBooking.update({
-    where: { id: bookingId },
-    data: { status: newStatus },
-  });
-
-  // Revalidate paths
-  revalidatePath("/admin/test-drives");
-  revalidatePath("/reservations");
-
-  return {
-    success: true,
-    message: "Test drive status updated successfully",
-  };
-});
-
-// Get dashboard data
 export const getDashboardData = adminActionClient.action(async () => {
   // Fetch all necessary data in a single parallel operation
   const [cars, testDrives] = await Promise.all([
