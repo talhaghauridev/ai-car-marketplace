@@ -28,9 +28,9 @@ import { useAction } from "next-safe-action/hooks";
 import Image from "next/image";
 
 // Predefined options
-const fuelTypes = ["Petrol", "Diesel", "Electric", "Hybrid", "Plug-in Hybrid"];
-const transmissions = ["Automatic", "Manual", "Semi-Automatic"];
-const bodyTypes = ["SUV", "Sedan", "Hatchback", "Convertible", "Coupe", "Wagon", "Pickup"];
+const fuelTypes = ["PETROL", "DIESEL", "ELECTRIC", "HYBRID", "CNG"];
+const transmissions = ["MANUAL", "AUTOMATIC", "CVT"];
+const bodyTypes = ["SUV", "SEDAN", "HATCHBACK", "CONVERTIBLE", "COUPE", "WAGON", "TRUCK"];
 const carStatuses = ["AVAILABLE", "UNAVAILABLE", "SOLD"];
 
 // Define form schema with Zod
@@ -53,11 +53,103 @@ const carFormSchema = z.object({
   featured: z.boolean().default(false),
 });
 
+// ✅ Helper functions to safely parse AI data
+const parseAIData = {
+  // Parse price strings like "$120,000", "120000", "120k" etc.
+  price: (priceStr: string): string => {
+    if (!priceStr || priceStr.toLowerCase() === "unknown") return "";
+
+    // Remove currency symbols, commas, and spaces
+    const cleanPrice = priceStr.replace(/[$,\s]/g, "");
+
+    // Handle 'k' suffix (e.g., "25k" -> "25000")
+    if (cleanPrice.toLowerCase().endsWith("k")) {
+      const num = parseFloat(cleanPrice.slice(0, -1));
+      return isNaN(num) ? "" : (num * 1000).toString();
+    }
+
+    // Parse regular number
+    const num = parseFloat(cleanPrice);
+    return isNaN(num) ? "" : num.toString();
+  },
+
+  // Parse mileage strings like "15,000", "New", "Low" etc.
+  mileage: (mileageStr: string): string => {
+    if (!mileageStr) return "";
+
+    const lower = mileageStr.toLowerCase();
+
+    // Handle special cases
+    if (lower.includes("new") || lower.includes("0")) return "0";
+    if (lower.includes("low")) return "10000";
+    if (lower.includes("high")) return "100000";
+    if (lower.includes("unknown")) return "";
+
+    // Extract numbers from string
+    const numbers = mileageStr.replace(/[^\d]/g, "");
+    const num = parseInt(numbers);
+    return isNaN(num) ? "" : num.toString();
+  },
+
+  // Normalize fuel type to match our enum
+  fuelType: (fuelStr: string): string => {
+    if (!fuelStr) return "";
+
+    const lower = fuelStr.toLowerCase();
+    if (lower.includes("petrol") || lower.includes("gasoline") || lower.includes("gas"))
+      return "PETROL";
+    if (lower.includes("diesel")) return "DIESEL";
+    if (lower.includes("electric") || lower.includes("ev")) return "ELECTRIC";
+    if (lower.includes("hybrid")) return "HYBRID";
+    if (lower.includes("cng")) return "CNG";
+
+    return "PETROL"; // Default fallback
+  },
+
+  // Normalize transmission
+  transmission: (transStr: string): string => {
+    if (!transStr) return "";
+
+    const lower = transStr.toLowerCase();
+    if (lower.includes("automatic") || lower.includes("auto")) return "AUTOMATIC";
+    if (lower.includes("manual")) return "MANUAL";
+    if (lower.includes("cvt")) return "CVT";
+
+    return "AUTOMATIC"; // Default fallback
+  },
+
+  // Normalize body type
+  bodyType: (bodyStr: string): string => {
+    if (!bodyStr) return "";
+
+    const lower = bodyStr.toLowerCase();
+    if (lower.includes("suv")) return "SUV";
+    if (lower.includes("sedan")) return "SEDAN";
+    if (lower.includes("hatchback") || lower.includes("hatch")) return "HATCHBACK";
+    if (lower.includes("convertible")) return "CONVERTIBLE";
+    if (lower.includes("coupe")) return "COUPE";
+    if (lower.includes("wagon") || lower.includes("estate")) return "WAGON";
+    if (lower.includes("truck") || lower.includes("pickup")) return "TRUCK";
+
+    return "SEDAN"; // Default fallback
+  },
+
+  // Parse seats
+  seats: (seatsStr: string | number): string => {
+    if (!seatsStr) return "5"; // Default to 5 seats
+
+    const num = typeof seatsStr === "number" ? seatsStr : parseInt(seatsStr.toString());
+    if (isNaN(num) || num < 1 || num > 20) return "5";
+
+    return num.toString();
+  },
+};
+
 export const AddCarForm = () => {
   const router = useRouter();
-  const [imagePreview, setImagePreview] = useState(null);
-  const [uploadedImages, setUploadedImages] = useState([]);
-  const [uploadedAiImage, setUploadedAiImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedAiImage, setUploadedAiImage] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState("ai");
   const [imageError, setImageError] = useState("");
@@ -83,77 +175,91 @@ export const AddCarForm = () => {
       bodyType: "",
       seats: "",
       description: "",
-      status: "AVAILABLE",
+      status: "AVAILABLE" as const,
       featured: false,
     },
   });
 
-  const {
-    isPending: addCarLoading,
-    execute: addCarFn,
-    result: {
-      data: addCarResult,
-      serverError: addCarError,
-      validationErrors: addCarValidationErrors,
-    },
-  } = useAction(addCar);
+  const { isPending: addCarLoading, execute: addCarFn, result: addCarResult } = useAction(addCar);
 
   const {
     isPending: processImageLoading,
     execute: processImageFn,
-    result: {
-      data: processImageResult,
-      serverError: processImageError,
-      validationErrors: processImageValidationErrors,
-    },
+    result: processImageResult,
   } = useAction(processCarImageWithAI);
 
-  console.log({ addCarValidationErrors, processImageValidationErrors });
   useEffect(() => {
-    if (addCarResult?.success) {
+    if (addCarResult?.data?.success) {
       toast.success("Car added successfully");
       router.push("/admin/cars");
+    }
+
+    if (addCarResult?.serverError) {
+      toast.error(addCarResult.serverError);
     }
   }, [addCarResult, router]);
 
   useEffect(() => {
-    if (processImageError) {
-      toast.error(processImageError || "Failed to upload car");
+    if (processImageResult?.serverError) {
+      toast.error(processImageResult.serverError || "Failed to process image");
     }
-  }, [processImageError]);
+  }, [processImageResult?.serverError]);
 
+  // ✅ Enhanced AI result processing with better error handling
   useEffect(() => {
-    if (processImageResult?.success) {
-      const carDetails = processImageResult.data!;
+    if (processImageResult?.data?.success) {
+      const carDetails = processImageResult.data.data;
 
-      // Update form with AI results
-      setValue("make", carDetails?.make);
-      setValue("model", carDetails?.model);
-      setValue("year", carDetails?.year.toString());
-      setValue("color", carDetails?.color);
-      setValue("bodyType", carDetails?.bodyType);
-      setValue("fuelType", carDetails?.fuelType);
-      setValue("price", carDetails?.price);
-      setValue("mileage", carDetails?.mileage);
-      setValue("transmission", carDetails?.transmission);
-      setValue("description", carDetails?.description);
+      if (!carDetails) {
+        toast.error("No car details extracted from image");
+        return;
+      }
 
-      // Add the image to the uploaded images
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        // @ts-ignore
-        setUploadedImages((prev) => [...prev, e?.target?.result]);
-      };
-      reader.readAsDataURL(uploadedAiImage!);
+      try {
+        // ✅ Safely update form with AI results using helper functions
+        setValue("make", carDetails.make || "");
+        setValue("model", carDetails.model || "");
+        setValue("year", carDetails.year ? carDetails.year.toString() : "");
+        setValue("color", carDetails.color || "");
+        setValue("description", carDetails.description || "");
 
-      toast.success("Successfully extracted car details", {
-        description: `Detected ${carDetails?.year} ${carDetails?.make} ${
-          carDetails?.model
-        } with ${Math.round(carDetails?.confidence * 100)}% confidence`,
-      });
+        // ✅ Parse complex fields with fallbacks
+        const parsedPrice = parseAIData.price(carDetails.price || "");
+        const parsedMileage = parseAIData.mileage(carDetails.mileage || "");
+        const parsedFuelType = parseAIData.fuelType(carDetails.fuelType || "");
+        const parsedTransmission = parseAIData.transmission(carDetails.transmission || "");
+        const parsedBodyType = parseAIData.bodyType(carDetails.bodyType || "");
 
-      // Switch to manual tab for the user to review and fill in missing details
-      setActiveTab("manual");
+        setValue("price", parsedPrice);
+        setValue("mileage", parsedMileage);
+        setValue("fuelType", parsedFuelType);
+        setValue("transmission", parsedTransmission);
+        setValue("bodyType", parsedBodyType);
+
+        // Add the AI processed image to uploaded images
+        if (uploadedAiImage) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result;
+            if (result) {
+              setUploadedImages((prev) => [...prev, result as string]);
+            }
+          };
+          reader.readAsDataURL(uploadedAiImage);
+        }
+
+        // ✅ Show detailed success message
+        const confidence = Math.round((carDetails.confidence || 0) * 100);
+        toast.success("Successfully extracted car details", {
+          description: `Detected ${carDetails.year || "Unknown"} ${carDetails.make || "Unknown"} ${carDetails.model || "Unknown"} with ${confidence}% confidence`,
+        });
+
+        // Switch to manual tab for review
+        setActiveTab("manual");
+      } catch (error) {
+        console.error("Error processing AI data:", error);
+        toast.error("Error processing AI data. Please fill in details manually.");
+      }
     }
   }, [processImageResult, setValue, uploadedAiImage]);
 
@@ -167,7 +273,7 @@ export const AddCarForm = () => {
   };
 
   // Handle AI image upload with Dropzone
-  const onAiDrop = useCallback((acceptedFiles: any) => {
+  const onAiDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
@@ -180,7 +286,7 @@ export const AddCarForm = () => {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      setImagePreview(e.target?.result as any);
+      setImagePreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
   }, []);
@@ -195,8 +301,8 @@ export const AddCarForm = () => {
   });
 
   // Handle multiple image uploads with Dropzone
-  const onMultiImagesDrop = useCallback((acceptedFiles: any) => {
-    const validFiles = acceptedFiles.filter((file: any) => {
+  const onMultiImagesDrop = useCallback((acceptedFiles: File[]) => {
+    const validFiles = acceptedFiles.filter((file) => {
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`${file.name} exceeds 5MB limit and will be skipped`);
         return false;
@@ -215,16 +321,17 @@ export const AddCarForm = () => {
         clearInterval(interval);
 
         // Process the images
-        const newImages: any[] = [];
-        validFiles.forEach((file: any) => {
+        const newImages: string[] = [];
+        validFiles.forEach((file) => {
           const reader = new FileReader();
-          reader.onload = (e: any) => {
-            newImages.push(e.target.result);
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              newImages.push(e.target.result as string);
+            }
 
             // When all images are processed
             if (newImages.length === validFiles.length) {
-              // @ts-ignore
-              setUploadedImages((prev: any) => [...prev, ...newImages]);
+              setUploadedImages((prev) => [...prev, ...newImages]);
               setUploadProgress(0);
               setImageError("");
               toast.success(`Successfully uploaded ${validFiles.length} images`);
@@ -246,28 +353,46 @@ export const AddCarForm = () => {
     });
 
   // Remove image from upload preview
-  const removeImage = (index: any) => {
-    setUploadedImages((prev: any) => prev.filter((_: any, i: any) => i !== index));
+  const removeImage = (index: number) => {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // ✅ Enhanced form submission with better error handling
   const onSubmit = async (data: any) => {
     if (uploadedImages.length === 0) {
       setImageError("Please upload at least one image");
       return;
     }
 
-    const carData = {
-      ...data,
-      year: parseInt(data.year),
-      price: parseFloat(data.price),
-      mileage: parseInt(data.mileage),
-      seats: data.seats ? parseInt(data.seats) : null,
-    };
+    try {
+      // ✅ Safely parse form data with fallbacks
+      const carData = {
+        make: data.make || "",
+        model: data.model || "",
+        year: parseInt(data.year) || new Date().getFullYear(),
+        price: parseFloat(data.price) || 0,
+        mileage: parseInt(data.mileage) || 0,
+        color: data.color || "",
+        fuelType: data.fuelType || "PETROL",
+        transmission: data.transmission || "AUTOMATIC",
+        bodyType: data.bodyType || "SEDAN",
+        seats: data.seats ? parseInt(data.seats) : 5,
+        description: data.description || "",
+        status: data.status || "AVAILABLE",
+        featured: Boolean(data.featured),
+      };
 
-    await addCarFn({
-      ...carData,
-      images: uploadedImages,
-    });
+      console.log({ carData });
+
+      // ✅ Uncomment when ready to submit
+      await addCarFn({
+        carData,
+        images: uploadedImages,
+      });
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast.error("Error submitting form. Please check your data.");
+    }
   };
 
   return (
@@ -373,8 +498,8 @@ export const AddCarForm = () => {
                   <div className="space-y-2">
                     <Label htmlFor="fuelType">Fuel Type</Label>
                     <Select
-                      onValueChange={(value) => setValue("fuelType", value)}
-                      defaultValue={getValues("fuelType")}>
+                      value={watch("fuelType")}
+                      onValueChange={(value) => setValue("fuelType", value)}>
                       <SelectTrigger className={errors.fuelType ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select fuel type" />
                       </SelectTrigger>
@@ -397,8 +522,8 @@ export const AddCarForm = () => {
                   <div className="space-y-2">
                     <Label htmlFor="transmission">Transmission</Label>
                     <Select
-                      onValueChange={(value) => setValue("transmission", value)}
-                      defaultValue={getValues("transmission")}>
+                      value={watch("transmission")}
+                      onValueChange={(value) => setValue("transmission", value)}>
                       <SelectTrigger className={errors.transmission ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select transmission" />
                       </SelectTrigger>
@@ -421,8 +546,8 @@ export const AddCarForm = () => {
                   <div className="space-y-2">
                     <Label htmlFor="bodyType">Body Type</Label>
                     <Select
-                      onValueChange={(value) => setValue("bodyType", value)}
-                      defaultValue={getValues("bodyType")}>
+                      value={watch("bodyType")}
+                      onValueChange={(value) => setValue("bodyType", value)}>
                       <SelectTrigger className={errors.bodyType ? "border-red-500" : ""}>
                         <SelectValue placeholder="Select body type" />
                       </SelectTrigger>
@@ -457,10 +582,10 @@ export const AddCarForm = () => {
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
                     <Select
+                      value={watch("status")}
                       onValueChange={(value) =>
                         setValue("status", value as "AVAILABLE" | "UNAVAILABLE" | "SOLD")
-                      }
-                      defaultValue={getValues("status")}>
+                      }>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -554,8 +679,8 @@ export const AddCarForm = () => {
                             <Image
                               src={image}
                               alt={`Car image ${index + 1}`}
-                              height={50}
-                              width={50}
+                              height={112}
+                              width={112}
                               className="h-28 w-full object-cover rounded-md"
                               priority
                             />
