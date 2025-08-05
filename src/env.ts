@@ -6,6 +6,7 @@ export const env = createEnv({
     GEMINI_API_KEY: z.string().nonempty(),
     ARCJET_KEY: z.string().nonempty(),
     CLERK_SECRET_KEY: z.string().nonempty(),
+    DATABASE_URL: z.string().nonempty(),
   },
 
   client: {
