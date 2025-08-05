@@ -6,6 +6,7 @@ import { createSafeActionClient } from "next-safe-action";
 export const actionClient = createSafeActionClient({
   throwValidationErrors: true,
   handleServerError: (error) => {
+    console.log({ error: JSON.stringify(error) });
     return error.message;
   },
 });

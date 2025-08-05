@@ -25,7 +25,10 @@ export default function RootLayout({
         lang="en"
         suppressHydrationWarning>
         <Toaster richColors />
-        <NextTopLoader />
+        <NextTopLoader
+          showSpinner={false}
+          shadow={"0"}
+        />
         <body className={`${inter.className} antialiased`}>
           <Header />
           <main className="min-h-screen">{children}</main>
