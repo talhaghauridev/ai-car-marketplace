@@ -1,3 +1,4 @@
+import { getAdmin } from "@/actions/admin.actions";
 import Header from "@/components/header";
 import BodyType from "@/components/home/body-type";
 import BrowseSection from "@/components/home/browse-section";
@@ -7,7 +8,12 @@ import Hero from "@/components/home/hero";
 import { Button } from "@/components/ui/button";
 import { SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
-const page = () => {
+const page = async () => {
+  const response = await getAdmin();
+  console.log({
+    response,
+  });
+
   return (
     <main className="flex flex-col pt-20">
       <Header />
