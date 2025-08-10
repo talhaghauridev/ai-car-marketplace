@@ -1,4 +1,4 @@
-import "server-only";
+"use server";
 import { serializeCarData } from "@/lib/helpers";
 import prisma from "@/lib/prisma";
 import {
@@ -7,6 +7,8 @@ import {
 } from "@/lib/validations/admin.validations";
 import { adminActionClient } from "@/utils/safe-action";
 import { revalidatePath } from "next/cache";
+import { UserRole } from "@prisma/client";
+import { z } from "zod";
 
 export const getAdmin = adminActionClient.action(async ({ ctx }) => {
   return { authorized: true, user: ctx.user };
@@ -108,6 +110,44 @@ export const updateTestDriveStatus = adminActionClient
       success: true,
       message: "Test drive status updated successfully",
     };
+  });
+
+// Get all users
+export const getUsers = adminActionClient.action(async () => {
+  // Get all users
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    success: true,
+    data: users.map((user) => ({
+      ...user,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    })),
+  };
+});
+
+// Update user role
+export const updateUserRole = adminActionClient
+  .inputSchema(
+    z.object({
+      userId: z.string(),
+      role: z.enum(UserRole),
+    })
+  )
+  .action(async ({ parsedInput: { userId, role }, ctx: { user: adminUser } }) => {
+    // Update user role
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role },
+    });
+
+    // Revalidate paths
+    revalidatePath("/admin/settings");
+
+    return { success: true };
   });
 
 export const getDashboardData = adminActionClient.action(async () => {
