@@ -9,7 +9,7 @@ export const metadata = {
 
 export default async function CarsPage() {
   // Fetch filters data on the server
-  const filtersData = await getCarFilters();
+  const { data: filtersData } = await getCarFilters();
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -18,7 +18,7 @@ export default async function CarsPage() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Section */}
         <div className="w-full lg:w-80 flex-shrink-0">
-          <CarFilters filters={filtersData.data} />
+          <CarFilters filters={filtersData?.data!} />
         </div>
 
         {/* Car Listings */}

@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { getCars } from "@/actions/car-listing.actions";
 import { CarCard } from "@/components/car-card";
-import useFetch from "@/hooks/use-fetch";
-import { getCars } from "@/actions/car-listing";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Info } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { JSX, useEffect, useState } from "react";
 import CarListingsLoading from "./car-listing-loading";
 
 import {
@@ -20,26 +19,81 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useAction } from "next-safe-action/hooks";
+
+type CarListingsParams = {
+  search: string;
+  make: string;
+  bodyType: string;
+  fuelType: string;
+  transmission: string;
+  minPrice: string | number;
+  maxPrice: string | number;
+  sortBy: string;
+  page: number;
+  limit: number;
+};
+
+interface Car {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  price: number;
+  mileage: number;
+  imageUrl: string;
+  images: string[];
+  transmission: string;
+  fuelType: string;
+  color: string;
+  bodyType: string;
+  engineSize: string;
+  features: string[];
+  description: string;
+  isAvailable: boolean;
+  rating: number;
+  reviewCount: number;
+  wishlisted: boolean;
+}
+
+interface PaginationData {
+  total: number;
+  pages: number;
+  page: number;
+  limit: number;
+}
+
+interface CarsResponse {
+  success: boolean;
+  data: Car[];
+  pagination: PaginationData;
+}
 
 export function CarListings() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 6;
+  const [loading, setLoading] = useState(true);
 
-  // Extract filter values from searchParams
+  // Extract filter values from searchParams with proper types
   const search = searchParams.get("search") || "";
   const make = searchParams.get("make") || "";
   const bodyType = searchParams.get("bodyType") || "";
   const fuelType = searchParams.get("fuelType") || "";
   const transmission = searchParams.get("transmission") || "";
-  const minPrice = searchParams.get("minPrice") || 0;
-  const maxPrice = searchParams.get("maxPrice") || Number.MAX_SAFE_INTEGER;
-  const sortBy = searchParams.get("sortBy") || "newest";
-  const page = parseInt(searchParams.get("page") || "1");
+  const minPrice = parseInt(searchParams.get("minPrice") || "0") || 0;
+  const maxPrice =
+    parseInt(searchParams.get("maxPrice") || String(Number.MAX_SAFE_INTEGER)) ||
+    Number.MAX_SAFE_INTEGER;
+  const sortBy = (searchParams.get("sortBy") as "newest" | "priceAsc" | "priceDesc") || "newest";
+  const page = parseInt(searchParams.get("page") || "1") || 1;
 
-  // Use the useFetch hook
-  const { loading, fn: fetchCars, data: result, error } = useFetch(getCars);
+  // Use the useAction hook with proper typing
+  const {
+    execute: fetchCars,
+    result: { data: result, serverError: error },
+  } = useAction(getCars);
 
   // Fetch cars when filters change
   useEffect(() => {
@@ -67,24 +121,24 @@ export function CarListings() {
   }, [currentPage, router, searchParams, page]);
 
   // Handle pagination clicks
-  const handlePageChange = (pageNum) => {
+  const handlePageChange = (pageNum: number) => {
     setCurrentPage(pageNum);
   };
 
   // Generate pagination URL
-  const getPaginationUrl = (pageNum) => {
+  const getPaginationUrl = (pageNum: number): string => {
     const params = new URLSearchParams(searchParams);
     params.set("page", pageNum.toString());
     return `?${params.toString()}`;
   };
 
   // Show loading state
-  if (loading && !result) {
+  if (loading || !result) {
     return <CarListingsLoading />;
   }
 
   // Handle error
-  if (error || (result && !result.success)) {
+  if (error) {
     return (
       <Alert variant="destructive">
         <Info className="h-4 w-4" />
@@ -94,12 +148,13 @@ export function CarListings() {
     );
   }
 
-  // If no results yet, return empty placeholder
-  if (!result || !result.data) {
-    return null;
-  }
-
-  const { data: cars, pagination } = result;
+  const cars: Car[] = result?.data || [];
+  const pagination = result?.pagination || {
+    total: 0,
+    pages: 1,
+    page: 1,
+    limit,
+  };
 
   // No results
   if (cars.length === 0) {
@@ -123,10 +178,10 @@ export function CarListings() {
   }
 
   // Generate pagination items
-  const paginationItems = [];
+  const paginationItems: JSX.Element[] = [];
 
   // Calculate which page numbers to show (first, last, and around current page)
-  const visiblePageNumbers = [];
+  const visiblePageNumbers: number[] = [];
 
   // Always show page 1
   visiblePageNumbers.push(1);
@@ -161,7 +216,7 @@ export function CarListings() {
         <PaginationLink
           href={getPaginationUrl(pageNumber)}
           isActive={pageNumber === page}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.preventDefault();
             handlePageChange(pageNumber);
           }}>
@@ -188,7 +243,7 @@ export function CarListings() {
 
       {/* Car grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cars.map((car) => (
+        {cars.map((car: Car) => (
           <CarCard
             key={car.id}
             car={car}
