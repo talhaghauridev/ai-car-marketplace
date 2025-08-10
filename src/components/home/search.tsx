@@ -7,15 +7,44 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
+import { processImageSearch } from "@/actions/home.actions";
+import { useAction } from "next-safe-action/hooks";
 
-function HomeSearch() {
+export default function HomeSearch() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [searchImage, setSearchImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isImageSearchActive, setIsImageSearchActive] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Use the useFetch hook for image processing
+  const {
+    isPending: isProcessing,
+    execute: processImageFn,
+    result: { data: processResult, serverError: processError },
+  } = useAction(processImageSearch);
+
+  // Handle process result and errors with useEffect
+  useEffect(() => {
+    if (processResult?.success) {
+      const params = new URLSearchParams();
+
+      // Add extracted params to the search
+      if (processResult.data.make) params.set("make", processResult.data.make);
+      if (processResult.data.bodyType) params.set("bodyType", processResult.data.bodyType);
+      if (processResult.data.color) params.set("color", processResult.data.color);
+
+      // Redirect to search results
+      router.push(`/cars?${params.toString()}`);
+    }
+  }, [processResult, router]);
+
+  useEffect(() => {
+    if (processError) {
+      toast.error("Failed to analyze image: " + (processError || "Unknown error"));
+    }
+  }, [processError]);
 
   // Handle image upload with react-dropzone
   const onDrop = (acceptedFiles: any) => {
@@ -31,7 +60,7 @@ function HomeSearch() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        setImagePreview(reader.result as string);
         setIsUploading(false);
         toast.success("Image uploaded successfully");
       };
@@ -71,7 +100,7 @@ function HomeSearch() {
     }
 
     // Use the processImageFn from useFetch hook
-    // await   processImageFn(searchImage);
+    await processImageFn({ file: searchImage });
   };
 
   return (
@@ -168,5 +197,3 @@ function HomeSearch() {
     </div>
   );
 }
-
-export default HomeSearch;

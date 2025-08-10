@@ -1,4 +1,5 @@
-import { getAdmin } from "@/actions/admin.actions";
+import { getFeaturedCars } from "@/actions/home.actions";
+import { CarCard } from "@/components/car-card";
 import Header from "@/components/header";
 import BodyType from "@/components/home/body-type";
 import BrowseSection from "@/components/home/browse-section";
@@ -7,21 +8,50 @@ import FaqSection from "@/components/home/faq-section";
 import Hero from "@/components/home/hero";
 import { Button } from "@/components/ui/button";
 import { SignedOut } from "@clerk/nextjs";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 const page = async () => {
-  const response = await getAdmin();
-  console.log({
-    response,
-  });
+  const { data: featuredCars, serverError } = await getFeaturedCars({ limit: 3 });
 
   return (
     <main className="flex flex-col pt-20">
       <Header />
       <Hero />
-      <FaqSection />
+      {/* Featured Cars */}
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold">Featured Cars</h2>
+            <Button
+              variant="ghost"
+              className="flex items-center"
+              asChild>
+              <Link href="/cars">
+                View All <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          {serverError && <p className="text-red-500">{serverError}</p>}
+          {featuredCars && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredCars?.map((car) => (
+                <CarCard
+                  key={car.id}
+                  car={car}
+                />
+              ))}
+            </div>
+          )}
+          {featuredCars && featuredCars.length === 0 && (
+            <p className="text-red-500">No featured cars found</p>
+          )}
+        </div>
+      </section>
+
       <BrowseSection />
       <ChooseUs />
       <BodyType />
+      <FaqSection />
 
       <section className="py-16 dotted-background text-white">
         <div className="container mx-auto px-4 text-center">
