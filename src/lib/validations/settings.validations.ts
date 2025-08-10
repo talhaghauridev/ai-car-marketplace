@@ -8,7 +8,7 @@ export const workingHourSchema = z.object({
 });
 
 export const saveWorkingHoursSchema = z.object({
-  workingHours: z.array(workingHourSchema)
+  workingHours: z.array(workingHourSchema),
 });
 
 export const updateDealershipInfoSchema = z.object({

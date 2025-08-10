@@ -53,8 +53,7 @@ export const Sidebar = () => {
                   ? "text-blue-700 bg-blue-100/50 hover:bg-blue-100 hover:text-blue-700"
                   : "",
                 "h-12"
-              )}
-            >
+              )}>
               <route.icon className="h-5 w-5" />
               {route.label}
             </Link>
@@ -80,8 +79,7 @@ export const Sidebar = () => {
               "flex flex-col items-center justify-center text-slate-500 text-xs font-medium transition-all",
               pathname === route.href ? "text-blue-700" : "",
               "py-1 flex-1"
-            )}
-          >
+            )}>
             <route.icon
               className={cn(
                 "h-6 w-6 mb-1",
