@@ -5,10 +5,9 @@ export const getFeaturedCarsSchema = z.object({
 });
 
 export const processImageSearchSchema = z.object({
-  file: z.instanceof(File, { message: "File is required" }).refine(
-    (file) => file.size > 0,
-    "File cannot be empty"
-  ),
+  file: z
+    .instanceof(File, { message: "File is required" })
+    .refine((file) => file.size > 0, "File cannot be empty"),
 });
 
 export type ProcessedCarImage = {
