@@ -23,7 +23,7 @@ type TestDriveCardProps = {
   isPast?: boolean;
   isAdmin?: boolean;
   isCancelling?: boolean;
-  renderStatusSelector?: () => null;
+  renderStatusSelector?: () => any;
 };
 
 // Helper function to format time
