@@ -1,20 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import {
-  Plus,
-  Search,
-  MoreHorizontal,
-  Star,
-  StarOff,
-  Trash2,
-  Eye,
-  Loader2,
-  Car as CarIcon,
-} from "lucide-react";
+import { deleteCar, getCars, updateCarStatus } from "@/actions/cars.actions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -24,28 +29,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { useAction } from "next-safe-action/hooks";
-import { getCars, deleteCar, updateCarStatus } from "@/actions/cars.actions";
 import { formatCurrency } from "@/lib/helpers";
-import Image from "next/image";
+import {
+  Car as CarIcon,
+  Eye,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Star,
+  StarOff,
+  Trash2,
+} from "lucide-react";
+import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export const CarsList = () => {
   const router = useRouter();
@@ -196,13 +195,10 @@ export const CarsList = () => {
                       <TableCell>
                         <div className="w-10 h-10 rounded-md overflow-hidden">
                           {car.images && car.images.length > 0 ? (
-                            <Image
+                            <img
                               src={car.images[0]}
                               alt={`${car.make} ${car.model}`}
-                              height={40}
-                              width={40}
                               className="w-full h-full object-cover"
-                              priority
                             />
                           ) : (
                             <div className="w-full h-full bg-gray-200 flex items-center justify-center">

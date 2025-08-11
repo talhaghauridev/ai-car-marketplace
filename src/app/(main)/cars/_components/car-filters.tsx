@@ -22,24 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type PriceRange = [number, number];
-
-type SortByOption = "newest" | "priceAsc" | "priceDesc";
-
-interface CarFiltersProps {
-  filters: {
-    makes: string[];
-    bodyTypes: string[];
-    fuelTypes: string[];
-    transmissions: string[];
-    priceRange: {
-      min: number;
-      max: number;
-    };
-  };
-}
-
-export const CarFilters: React.FC<CarFiltersProps> = ({ filters }) => {
+export const CarFilters = ({ filters }: any) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -50,10 +33,10 @@ export const CarFilters: React.FC<CarFiltersProps> = ({ filters }) => {
   const currentFuelType = searchParams.get("fuelType") || "";
   const currentTransmission = searchParams.get("transmission") || "";
   const currentMinPrice = searchParams.get("minPrice")
-    ? parseInt(searchParams.get("minPrice")!)
+    ? parseInt(String(searchParams.get("minPrice")))
     : filters.priceRange.min;
   const currentMaxPrice = searchParams.get("maxPrice")
-    ? parseInt(searchParams.get("maxPrice")!)
+    ? parseInt(String(searchParams.get("maxPrice")))
     : filters.priceRange.max;
   const currentSortBy = searchParams.get("sortBy") || "newest";
 
@@ -62,23 +45,8 @@ export const CarFilters: React.FC<CarFiltersProps> = ({ filters }) => {
   const [bodyType, setBodyType] = useState(currentBodyType);
   const [fuelType, setFuelType] = useState(currentFuelType);
   const [transmission, setTransmission] = useState(currentTransmission);
-  const [priceRange, setPriceRange] = useState<PriceRange>([currentMinPrice, currentMaxPrice]);
-  // Type guard to check if a string is a valid SortByOption
-  const isSortByOption = (value: string): value is SortByOption => {
-    return ["newest", "priceAsc", "priceDesc"].includes(value);
-  };
-
-  // Initialize sortBy state with type assertion
-  const [sortBy, setSortBy] = useState<SortByOption>(
-    isSortByOption(currentSortBy) ? currentSortBy : "newest"
-  );
-
-  // Wrapper function to ensure type safety when updating sortBy
-  const setSortBySafe = (value: string) => {
-    if (isSortByOption(value)) {
-      setSortBy(value as SortByOption);
-    }
-  };
+  const [priceRange, setPriceRange] = useState([currentMinPrice, currentMaxPrice]);
+  const [sortBy, setSortBy] = useState(currentSortBy);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   // Update local state when URL parameters change
@@ -88,7 +56,7 @@ export const CarFilters: React.FC<CarFiltersProps> = ({ filters }) => {
     setFuelType(currentFuelType);
     setTransmission(currentTransmission);
     setPriceRange([currentMinPrice, currentMaxPrice]);
-    setSortBySafe(currentSortBy);
+    setSortBy(currentSortBy);
   }, [
     currentMake,
     currentBodyType,
@@ -145,35 +113,29 @@ export const CarFilters: React.FC<CarFiltersProps> = ({ filters }) => {
   ]);
 
   // Handle filter changes
-  const handleFilterChange = (filterName: string, value: string | PriceRange) => {
+  const handleFilterChange = (filterName: any, value: any) => {
     switch (filterName) {
       case "make":
-        if (typeof value === "string") setMake(value);
+        setMake(value);
         break;
       case "bodyType":
-        if (typeof value === "string") setBodyType(value);
+        setBodyType(value);
         break;
       case "fuelType":
-        if (typeof value === "string") setFuelType(value);
+        setFuelType(value);
         break;
       case "transmission":
-        if (typeof value === "string") setTransmission(value);
+        setTransmission(value);
         break;
       case "priceRange":
-        if (Array.isArray(value) && value.length === 2) {
-          setPriceRange([value[0], value[1]]);
-        }
+        setPriceRange(value);
         break;
     }
   };
 
   // Handle clearing specific filter
-  const handleClearFilter = (filterName: string) => {
-    if (filterName === "priceRange") {
-      setPriceRange([filters.priceRange.min, filters.priceRange.max]);
-    } else {
-      handleFilterChange(filterName, "");
-    }
+  const handleClearFilter = (filterName: any) => {
+    handleFilterChange(filterName, "");
   };
 
   // Clear all filters
@@ -267,8 +229,8 @@ export const CarFilters: React.FC<CarFiltersProps> = ({ filters }) => {
 
       <Select
         value={sortBy}
-        onValueChange={(value: string) => {
-          setSortBySafe(value);
+        onValueChange={(value) => {
+          setSortBy(value);
           // Apply filters immediately when sort changes
           setTimeout(() => applyFilters(), 0);
         }}>

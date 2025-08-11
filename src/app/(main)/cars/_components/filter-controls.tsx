@@ -9,78 +9,50 @@ interface FilterOption {
   label: string;
 }
 
-interface FilterSection {
-  id: string;
-  title: string;
-  options: FilterOption[];
-  currentValue: string;
-  onChange: (value: string) => void;
-}
-
-interface Filters {
-  makes: string[];
-  bodyTypes: string[];
-  fuelTypes: string[];
-  transmissions: string[];
-  priceRange: {
-    min: number;
-    max: number;
-  };
-}
-
-interface CurrentFilters {
-  make: string;
-  bodyType: string;
-  fuelType: string;
-  transmission: string;
-  priceRange: [number, number];
-}
-
 interface CarFilterControlsProps {
-  filters: Filters;
-  currentFilters: CurrentFilters;
-  onFilterChange: (filterType: string, value: string | [number, number]) => void;
-  onClearFilter: (filterType: string) => void;
+  filters: any;
+  currentFilters: any;
+  onFilterChange: any;
+  onClearFilter: any;
 }
 
-export const CarFilterControls: React.FC<CarFilterControlsProps> = ({
+export const CarFilterControls = ({
   filters,
   currentFilters,
   onFilterChange,
   onClearFilter,
-}) => {
-  const { make, bodyType, fuelType, transmission, priceRange } = currentFilters || {};
+}: CarFilterControlsProps) => {
+  const { make, bodyType, fuelType, transmission, priceRange } = currentFilters;
 
   const filterSections = [
     {
       id: "make",
       title: "Make",
-      options: filters?.makes?.map((make: string) => ({ value: make, label: make })) || [],
+      options: filters.makes.map((make: any) => ({ value: make, label: make })),
       currentValue: make,
       onChange: (value: any) => onFilterChange("make", value),
     },
     {
       id: "bodyType",
       title: "Body Type",
-      options: filters?.bodyTypes?.map((type: string) => ({ value: type, label: type })) || [],
+      options: filters.bodyTypes.map((type: any) => ({ value: type, label: type })),
       currentValue: bodyType,
       onChange: (value: any) => onFilterChange("bodyType", value),
     },
     {
       id: "fuelType",
       title: "Fuel Type",
-      options: filters?.fuelTypes?.map((type: string) => ({ value: type, label: type })) || [],
+      options: filters.fuelTypes.map((type: any) => ({ value: type, label: type })),
       currentValue: fuelType,
       onChange: (value: any) => onFilterChange("fuelType", value),
     },
     {
       id: "transmission",
       title: "Transmission",
-      options:
-        filters?.transmissions?.map((type: string) => ({
-          value: type,
-          label: type,
-        })) || [],
+      options: filters.transmissions.map((type: any) => ({
+        value: type,
+        label: type,
+      })),
       currentValue: transmission,
       onChange: (value: any) => onFilterChange("transmission", value),
     },
@@ -96,10 +68,8 @@ export const CarFilterControls: React.FC<CarFilterControlsProps> = ({
             min={filters.priceRange.min}
             max={filters.priceRange.max}
             step={100}
-            value={
-              priceRange || [filters?.priceRange?.min || 0, filters?.priceRange?.max || 100000]
-            }
-            onValueChange={(value: [number, number]) => onFilterChange("priceRange", value)}
+            value={priceRange}
+            onValueChange={(value: any) => onFilterChange("priceRange", value)}
           />
         </div>
         <div className="flex items-center justify-between">
@@ -125,7 +95,7 @@ export const CarFilterControls: React.FC<CarFilterControlsProps> = ({
             )}
           </h4>
           <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-            {section.options?.map((option: FilterOption) => (
+            {section.options.map((option: any) => (
               <Badge
                 key={option.value}
                 variant={section.currentValue === option.value ? "default" : "outline"}

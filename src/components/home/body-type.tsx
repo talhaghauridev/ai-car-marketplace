@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { bodyTypes } from "@/lib/data";
 import { ChevronRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 const BodyType = () => {
   return (
@@ -25,13 +24,12 @@ const BodyType = () => {
               href={`/cars?bodyType=${type.name}`}
               className="relative group cursor-pointer">
               <div className="overflow-hidden rounded-lg flex justify-end h-28 mb-4 relative">
-                <Image
+                <img
                   src={
                     // @ts-ignore
                     type.imageUrl || `/body/${type.name.toLowerCase()}.webp`
                   }
                   alt={type.name}
-                  fill
                   className="object-cover group-hover:scale-105 transition duration-300"
                 />
               </div>

@@ -1,4 +1,3 @@
-// Car Listing Actions
 "use server";
 
 import { serializeCarData } from "@/lib/helpers";
@@ -129,7 +128,7 @@ export const getCars = actionClient
 
         // Add price range
         where.price = {
-          gte: parseFloat(String(minPrice!)) || 0,
+          gte: parseFloat(String(minPrice)) || 0,
         };
 
         if (maxPrice && maxPrice < Number.MAX_SAFE_INTEGER) {
@@ -165,7 +164,6 @@ export const getCars = actionClient
           orderBy,
         });
 
-        // If we have a user, check which cars are wishlisted
         let wishlisted = new Set();
         if (dbUser) {
           const savedCars = await prisma.userSavedCar.findMany({
@@ -176,7 +174,6 @@ export const getCars = actionClient
           wishlisted = new Set(savedCars.map((saved) => saved.carId));
         }
 
-        // Serialize and check wishlist status
         const serializedCars = cars.map((car) => serializeCarData(car, wishlisted.has(car.id)));
 
         return {

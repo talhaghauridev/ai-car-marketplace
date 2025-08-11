@@ -1,28 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { useAuth } from "@clerk/nextjs";
-import { AlertCircle, Calendar } from "lucide-react";
-import {
-  Car,
-  Fuel,
-  Gauge,
-  LocateFixed,
-  Share2,
-  Heart,
-  MessageSquare,
-  Currency,
-} from "lucide-react";
+import { toggleSavedCar } from "@/actions/car-listing.actions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { toggleSavedCar } from "@/actions/car-listing.actions";
-import { formatCurrency } from "@/lib/helpers";
-import { format } from "date-fns";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -30,8 +12,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import EmiCalculator from "./emi-calculator";
+import { formatCurrency } from "@/lib/helpers";
+import { useAuth } from "@clerk/nextjs";
+import { format } from "date-fns";
+import {
+  Calendar,
+  Car,
+  Currency,
+  Fuel,
+  Gauge,
+  Heart,
+  LocateFixed,
+  MessageSquare,
+  Share2,
+} from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import EmiCalculator from "./emi-calculator";
 
 export function CarDetails({ car, testDriveInfo }: { car: any; testDriveInfo: any }) {
   const router = useRouter();
@@ -111,12 +110,10 @@ export function CarDetails({ car, testDriveInfo }: { car: any; testDriveInfo: an
         <div className="w-full lg:w-7/12">
           <div className="aspect-video rounded-lg overflow-hidden relative mb-4">
             {car.images && car.images.length > 0 ? (
-              <Image
+              <img
                 src={car.images[currentImageIndex]}
                 alt={`${car.year} ${car.make} ${car.model}`}
-                fill
                 className="object-cover"
-                priority
               />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -137,10 +134,9 @@ export function CarDetails({ car, testDriveInfo }: { car: any; testDriveInfo: an
                       : "opacity-70 hover:opacity-100"
                   }`}
                   onClick={() => setCurrentImageIndex(index)}>
-                  <Image
+                  <img
                     src={image}
                     alt={`${car.year} ${car.make} ${car.model} - view ${index + 1}`}
-                    fill
                     className="object-cover"
                   />
                 </div>

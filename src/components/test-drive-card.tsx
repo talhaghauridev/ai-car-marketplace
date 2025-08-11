@@ -1,13 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { format, parseISO } from "date-fns";
-import { Calendar, Car, Clock, User, Loader2, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { format, parseISO } from "date-fns";
+import { ArrowRight, Calendar, Car, Clock, Loader2, User } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 
 type TestDriveCardProps = {
   booking: any;
@@ -84,10 +83,9 @@ export function TestDriveCard({
           <div className="sm:w-1/4 relative h-40 sm:h-auto">
             {booking.car.images && booking.car.images.length > 0 ? (
               <div className="relative w-full h-full">
-                <Image
+                <img
                   src={booking.car.images[0]}
                   alt={`${booking.car.make} ${booking.car.model}`}
-                  fill
                   className="object-cover"
                 />
               </div>

@@ -12,7 +12,6 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 const page = async () => {
   const { data: featuredCars, serverError } = await getFeaturedCars({ limit: 3 });
-
   return (
     <main className="flex flex-col pt-20">
       <Header />
