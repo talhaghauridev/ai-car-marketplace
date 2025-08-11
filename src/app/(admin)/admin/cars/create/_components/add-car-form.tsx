@@ -25,7 +25,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "next-safe-action/hooks";
-import Image from "next/image";
 
 // Predefined options
 const fuelTypes = ["PETROL", "DIESEL", "ELECTRIC", "HYBRID", "CNG"];
@@ -676,13 +675,10 @@ export const AddCarForm = () => {
                           <div
                             key={index}
                             className="relative group">
-                            <Image
+                            <img
                               src={image}
                               alt={`Car image ${index + 1}`}
-                              height={112}
-                              width={112}
                               className="h-28 w-full object-cover rounded-md"
-                              priority
                             />
                             <Button
                               type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, Car as CarIcon, Loader2 } from "lucide-react";
@@ -8,31 +8,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { toggleSavedCar } from "@/actions/car-listing.actions";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-
-type Car = {
-  id: string;
-  make: string;
-  model: string;
-  year: number;
-  price: number;
-  transmission: string;
-  fuelType: string;
-  mileage: number;
-  color: string;
-  bodyType: string;
-  images: string[];
-  wishlisted: boolean;
-};
-
-export const CarCard = ({ car }: { car: Car }) => {
+import { useAction } from "next-safe-action/hooks";
+import { useRouter as useTopLoader } from "nextjs-toploader/app";
+export const CarCard = ({ car }: { car: any }) => {
   const { isSignedIn } = useAuth();
   const router = useRouter();
+  const loading_router = useTopLoader();
   const [isSaved, setIsSaved] = useState(car.wishlisted);
-  const [isToggling, setIsToggling] = useState(false);
+
+  // Use the useFetch hook
+  const {
+    isPending: isToggling,
+    executeAsync: toggleSavedCarFn,
+    result: { data: toggleResult, serverError: toggleError },
+  } = useAction(toggleSavedCar);
+
+  // Handle toggle result with useEffect
+  useEffect(() => {
+    if (toggleResult?.success && toggleResult?.saved !== isSaved) {
+      setIsSaved(toggleResult.saved);
+      toast.success(toggleResult.message);
+    }
+  }, [toggleResult, isSaved]);
+
+  // Handle errors with useEffect
+  useEffect(() => {
+    if (toggleError) {
+      toast.error("Failed to update favorites");
+    }
+  }, [toggleError]);
+
   // Handle save/unsave car
-  const handleToggleSave = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleToggleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -41,6 +51,11 @@ export const CarCard = ({ car }: { car: Car }) => {
       router.push("/sign-in");
       return;
     }
+
+    if (isToggling) return;
+
+    // Call the toggleSavedCar function using our useFetch hook
+    await toggleSavedCarFn({ carId: car.id });
   };
 
   return (
@@ -118,7 +133,7 @@ export const CarCard = ({ car }: { car: Car }) => {
           <Button
             className="flex-1"
             onClick={() => {
-              router.push(`/cars/${car.id}`);
+              loading_router.push(`/cars/${car.id}`);
             }}>
             View Car
           </Button>

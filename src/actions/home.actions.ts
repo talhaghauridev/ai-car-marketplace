@@ -5,18 +5,20 @@ import aj from "@/lib/arcjet";
 import { request } from "@arcjet/next";
 import prisma from "@/lib/prisma";
 import { actionClient } from "@/utils/safe-action";
+import { auth } from "@clerk/nextjs/server";
 import {
   getFeaturedCarsSchema,
   processImageSearchSchema,
 } from "@/lib/validations/home.validations";
 
 // Helper function to serialize car data
-function serializeCarData(car: any) {
+function serializeCarData(car: any, wishlisted: boolean = false) {
   return {
     ...car,
     price: car.price ? parseFloat(car.price.toString()) : 0,
     createdAt: car.createdAt?.toISOString(),
     updatedAt: car.updatedAt?.toISOString(),
+    wishlisted,
   };
 }
 
@@ -33,6 +35,25 @@ async function fileToBase64(file: File) {
 export const getFeaturedCars = actionClient
   .inputSchema(getFeaturedCarsSchema)
   .action(async ({ parsedInput: { limit } }) => {
+    const { userId } = await auth();
+    let dbUser = null;
+    let wishlisted = new Set();
+
+    if (userId) {
+      dbUser = await prisma.user.findUnique({
+        where: { clerkUserId: userId },
+        select: { id: true },
+      });
+
+      if (dbUser) {
+        const savedCars = await prisma.userSavedCar.findMany({
+          where: { userId: dbUser.id },
+          select: { carId: true },
+        });
+        wishlisted = new Set(savedCars.map((saved: any) => saved.carId));
+      }
+    }
+
     const cars = await prisma.car.findMany({
       where: {
         featured: true,
@@ -42,7 +63,7 @@ export const getFeaturedCars = actionClient
       orderBy: { createdAt: "desc" },
     });
 
-    return cars.map(serializeCarData);
+    return cars.map((car) => serializeCarData(car, wishlisted.has(car.id)));
   });
 
 /**

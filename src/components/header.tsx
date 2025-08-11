@@ -15,18 +15,15 @@ const Header = async ({ isAdminPage = false }: HeaderProps) => {
   const user = await checkUser();
   const isAdmin = user.data?.role === "ADMIN";
 
-  console.log(user.serverError);
   return (
     <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b">
       <nav className="mx-auto px-4 py-4 flex items-center justify-between">
         <Link
           href={isAdminPage ? "/admin" : "/"}
           className="flex">
-          <Image
-            src={images.logos.default}
+          <img
+            src={images.logos.default.src}
             alt="Vehiql Logo"
-            width={160}
-            height={60}
             className="h-12 w-auto object-contain"
           />
           {isAdminPage && <span className="text-xs font-extralight">admin</span>}
@@ -57,12 +54,12 @@ const Header = async ({ isAdminPage = false }: HeaderProps) => {
                   </Button>
                 </Link>
               )}
-              <a href="/saved-cars">
+              <Link href="/saved-cars">
                 <Button className="flex items-center gap-2">
                   <Heart size={18} />
                   <span className="hidden md:inline">Saved Cars</span>
                 </Button>
-              </a>
+              </Link>
               {isAdmin && (
                 <Link href="/admin">
                   <Button

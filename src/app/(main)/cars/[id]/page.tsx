@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 
 export async function generateMetadata({ params }: { params: Promise<any> }) {
   const { id } = await params;
-  const { data: result } = await getCarById(id);
-  if (!result?.success) {
+  const { data: result, serverError } = await getCarById({ carId: id });
+  if (serverError && !result?.success) {
     return {
       title: "Car Not Found | Vehiql",
       description: "The requested car could not be found",
@@ -26,17 +26,16 @@ export async function generateMetadata({ params }: { params: Promise<any> }) {
 export default async function CarDetailsPage({ params }: { params: Promise<any> }) {
   // Fetch car details
   const { id } = await params;
-  const { data: result } = await getCarById(id);
+  const { data: result, serverError } = await getCarById({ carId: id });
 
-  // If car not found, show 404
-  if (!result?.data?.success) {
+  if (serverError) {
     notFound();
   }
 
   return (
     <div className="container mx-auto px-4 py-12">
       <CarDetails
-        car={result.data}
+        car={result?.data}
         testDriveInfo={result?.data?.testDriveInfo}
       />
     </div>
