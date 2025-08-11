@@ -1,33 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { format, parseISO } from "date-fns";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Calendar as CalendarIcon,
-  Car,
-  CheckCircle2,
-  Loader2,
-} from "lucide-react";
+import { bookTestDrive } from "@/actions/test-drive.actions";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -35,36 +11,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { bookTestDrive } from "@/actions/test-drive";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format, parseISO } from "date-fns";
+import { Calendar as CalendarIcon, Car, CheckCircle2, Loader2 } from "lucide-react";
+import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import useFetch from "@/hooks/use-fetch";
+import * as z from "zod/v4";
 
 // Define Zod schema for form validation
 const testDriveSchema = z.object({
   date: z.date({
-    required_error: "Please select a date for your test drive",
+    error: "Please select a date for your test drive",
   }),
   timeSlot: z.string({
-    required_error: "Please select a time slot",
+    error: "Please select a time slot",
   }),
   notes: z.string().optional(),
 });
 
-export function TestDriveForm({ car, testDriveInfo }) {
-  const router = useRouter();
-  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [bookingDetails, setBookingDetails] = useState(null);
+interface TestDriveFormProps {
+  car: {
+    id: string;
+    make: string;
+    model: string;
+    year: number;
+    images: string[];
+    price: number;
+    mileage: number;
+    fuelType: string;
+    transmission: string;
+    bodyType: string;
+    color: string;
+  };
+  testDriveInfo?: any;
+}
 
-  // Initialize react-hook-form with zod resolver
+export function TestDriveForm({ car, testDriveInfo }: TestDriveFormProps) {
+  const router = useRouter();
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<any[]>([]);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState<any>(null);
+
   const {
     control,
     handleSubmit,
     watch,
     setValue,
     reset,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(testDriveSchema),
     defaultValues: {
@@ -83,11 +90,10 @@ export function TestDriveForm({ car, testDriveInfo }) {
 
   // Custom hooks for API calls
   const {
-    loading: bookingInProgress,
-    fn: bookTestDriveFn,
-    data: bookingResult,
-    error: bookingError,
-  } = useFetch(bookTestDrive);
+    isPending: bookingInProgress,
+    execute: bookTestDriveFn,
+    result: { data: bookingResult, serverError: bookingError },
+  } = useAction(bookTestDrive);
 
   // Handle successful booking
   useEffect(() => {
@@ -97,10 +103,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
         timeSlot: `${format(
           parseISO(`2022-01-01T${bookingResult?.data?.startTime}`),
           "h:mm a"
-        )} - ${format(
-          parseISO(`2022-01-01T${bookingResult?.data?.endTime}`),
-          "h:mm a"
-        )}`,
+        )} - ${format(parseISO(`2022-01-01T${bookingResult?.data?.endTime}`), "h:mm a")}`,
         notes: bookingResult?.data?.notes,
       });
       setShowConfirmation(true);
@@ -113,9 +116,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
   // Handle booking error
   useEffect(() => {
     if (bookingError) {
-      toast.error(
-        bookingError.message || "Failed to book test drive. Please try again."
-      );
+      toast.error(bookingError || "Failed to book test drive. Please try again.");
     }
   }, [bookingError]);
 
@@ -127,7 +128,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
 
     // Find working hours for the selected day
     const daySchedule = dealership.workingHours.find(
-      (day) => day.dayOfWeek === selectedDayOfWeek
+      (day: any) => day.dayOfWeek === selectedDayOfWeek
     );
 
     if (!daySchedule || !daySchedule.isOpen) {
@@ -140,13 +141,13 @@ export function TestDriveForm({ car, testDriveInfo }) {
     const closeHour = parseInt(daySchedule.closeTime.split(":")[0]);
 
     // Generate time slots (every hour)
-    const slots = [];
+    const slots: any[] = [];
     for (let hour = openHour; hour < closeHour; hour++) {
       const startTime = `${hour.toString().padStart(2, "0")}:00`;
       const endTime = `${(hour + 1).toString().padStart(2, "0")}:00`;
 
       // Check if this slot is already booked
-      const isBooked = existingBookings.some((booking) => {
+      const isBooked = existingBookings.some((booking: any) => {
         const bookingDate = booking.date;
         return (
           bookingDate === format(selectedDate, "yyyy-MM-dd") &&
@@ -171,7 +172,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
   }, [selectedDate]);
 
   // Create a function to determine which days should be disabled
-  const isDayDisabled = (day) => {
+  const isDayDisabled = (day: any) => {
     // Disable past dates
     if (day < new Date()) {
       return true;
@@ -182,7 +183,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
 
     // Find working hours for the day
     const daySchedule = dealership?.workingHours?.find(
-      (schedule) => schedule.dayOfWeek === dayOfWeek
+      (schedule: any) => schedule.dayOfWeek === dayOfWeek
     );
 
     // Disable if dealership is closed on this day
@@ -190,10 +191,8 @@ export function TestDriveForm({ car, testDriveInfo }) {
   };
 
   // Submit handler
-  const onSubmit = async (data) => {
-    const selectedSlot = availableTimeSlots.find(
-      (slot) => slot.id === data.timeSlot
-    );
+  const onSubmit = async (data: any) => {
+    const selectedSlot: any = availableTimeSlots.find((slot: any) => slot.id === data.timeSlot);
 
     if (!selectedSlot) {
       toast.error("Selected time slot is not available");
@@ -203,7 +202,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
     await bookTestDriveFn({
       carId: car.id,
       bookingDate: format(data.date, "yyyy-MM-dd"),
-      startTime: selectedSlot.startTime,
+      startTime: selectedSlot?.startTime,
       endTime: selectedSlot.endTime,
       notes: data.notes || "",
     });
@@ -248,9 +247,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
             <div className="mt-4 text-sm text-gray-500">
               <div className="flex justify-between py-1 border-b">
                 <span>Mileage</span>
-                <span className="font-medium">
-                  {car.mileage.toLocaleString()} miles
-                </span>
+                <span className="font-medium">{car.mileage.toLocaleString()} miles</span>
               </div>
               <div className="flex justify-between py-1 border-b">
                 <span>Fuel Type</span>
@@ -277,19 +274,13 @@ export function TestDriveForm({ car, testDriveInfo }) {
           <CardContent className="p-6">
             <h2 className="text-xl font-bold mb-4">Dealership Info</h2>
             <div className="text-sm">
-              <p className="font-medium">
-                {dealership?.name || "Vehiql Motors"}
-              </p>
-              <p className="text-gray-600 mt-1">
-                {dealership?.address || "Address not available"}
-              </p>
+              <p className="font-medium">{dealership?.name || "Vehiql Motors"}</p>
+              <p className="text-gray-600 mt-1">{dealership?.address || "Address not available"}</p>
               <p className="text-gray-600 mt-3">
-                <span className="font-medium">Phone:</span>{" "}
-                {dealership?.phone || "Not available"}
+                <span className="font-medium">Phone:</span> {dealership?.phone || "Not available"}
               </p>
               <p className="text-gray-600">
-                <span className="font-medium">Email:</span>{" "}
-                {dealership?.email || "Not available"}
+                <span className="font-medium">Email:</span> {dealership?.email || "Not available"}
               </p>
             </div>
           </CardContent>
@@ -302,12 +293,12 @@ export function TestDriveForm({ car, testDriveInfo }) {
           <CardContent className="p-6">
             <h2 className="text-xl font-bold mb-6">Schedule Your Test Drive</h2>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6">
               {/* Date Selection */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium">
-                  Select a Date
-                </label>
+                <label className="block text-sm font-medium">Select a Date</label>
                 <Controller
                   name="date"
                   control={control}
@@ -320,12 +311,9 @@ export function TestDriveForm({ car, testDriveInfo }) {
                             className={cn(
                               "w-full justify-start text-left font-normal",
                               !field.value && "text-muted-foreground"
-                            )}
-                          >
+                            )}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value
-                              ? format(field.value, "PPP")
-                              : "Pick a date"}
+                            {field.value ? format(field.value, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -350,9 +338,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
 
               {/* Time Slot Selection */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium">
-                  Select a Time Slot
-                </label>
+                <label className="block text-sm font-medium">Select a Time Slot</label>
                 <Controller
                   name="timeSlot"
                   control={control}
@@ -361,24 +347,23 @@ export function TestDriveForm({ car, testDriveInfo }) {
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
-                        disabled={
-                          !selectedDate || availableTimeSlots.length === 0
-                        }
-                      >
+                        disabled={!selectedDate || availableTimeSlots.length === 0}>
                         <SelectTrigger>
                           <SelectValue
                             placeholder={
                               !selectedDate
                                 ? "Please select a date first"
                                 : availableTimeSlots.length === 0
-                                ? "No available slots on this date"
-                                : "Select a time slot"
+                                  ? "No available slots on this date"
+                                  : "Select a time slot"
                             }
                           />
                         </SelectTrigger>
                         <SelectContent>
                           {availableTimeSlots.map((slot) => (
-                            <SelectItem key={slot.id} value={slot.id}>
+                            <SelectItem
+                              key={slot.id}
+                              value={slot.id}>
                               {slot.label}
                             </SelectItem>
                           ))}
@@ -396,9 +381,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
 
               {/* Notes */}
               <div className="space-y-2">
-                <label className="block text-sm font-medium">
-                  Additional Notes (Optional)
-                </label>
+                <label className="block text-sm font-medium">Additional Notes (Optional)</label>
                 <Controller
                   name="notes"
                   control={control}
@@ -416,8 +399,7 @@ export function TestDriveForm({ car, testDriveInfo }) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={bookingInProgress}
-              >
+                disabled={bookingInProgress}>
                 {bookingInProgress ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -442,8 +424,8 @@ export function TestDriveForm({ car, testDriveInfo }) {
                   Test drives typically last 30-60 minutes
                 </li>
                 <li className="flex items-start">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5" />
-                  A dealership representative will accompany you
+                  <CheckCircle2 className="h-4 w-4 text-green-500 mr-2 mt-0.5" />A dealership
+                  representative will accompany you
                 </li>
               </ul>
             </div>
@@ -452,7 +434,9 @@ export function TestDriveForm({ car, testDriveInfo }) {
       </div>
 
       {/* Confirmation Dialog */}
-      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+      <Dialog
+        open={showConfirmation}
+        onOpenChange={setShowConfirmation}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

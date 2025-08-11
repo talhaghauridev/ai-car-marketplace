@@ -1,4 +1,4 @@
-import { getCarById } from "@/actions/car-listing";
+import { getCarById } from "@/actions/car-listing.actions";
 import { notFound } from "next/navigation";
 import { TestDriveForm } from "./_components/test-drive-form";
 
@@ -9,13 +9,13 @@ export async function generateMetadata() {
   };
 }
 
-export default async function TestDrivePage({ params }) {
+export default async function TestDrivePage({ params }: { params: Promise<any> }) {
   // Fetch car details
-  const { id } = params;
-  const result = await getCarById(id);
+  const { id } = await params;
+  const { data: result } = await getCarById(id);
 
   // If car not found, show 404
-  if (!result.success) {
+  if (!result?.success) {
     notFound();
   }
 
