@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { carMakes } from "@/lib/data";
 import { ChevronRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 const BrowseSection = () => {
   return (
@@ -24,12 +25,13 @@ const BrowseSection = () => {
               href={`/cars?make=${make.name}`}
               className="bg-white rounded-lg shadow p-4 text-center hover:shadow-md transition cursor-pointer">
               <div className="h-16 w-auto mx-auto mb-2 relative">
-                <img
+                <Image
                   src={
                     // @ts-ignore
                     make.imageUrl || `/make/${make.name.toLowerCase()}.webp`
                   }
                   alt={make.name}
+                  fill
                   style={{ objectFit: "contain" }}
                 />
               </div>
